@@ -57,4 +57,12 @@ async function deleteTask(req, res) {
   res.status(204).end();
 }
 
-export { listTasks, getTask, createTask, updateTask, deleteTask };
+function nextTask(req, res) {
+  const task = store.getNextPendingTask();
+  if (!task) {
+    return res.status(404).json({ error: 'No pending tasks' });
+  }
+  res.json(task);
+}
+
+export { listTasks, getTask, createTask, updateTask, deleteTask, nextTask };

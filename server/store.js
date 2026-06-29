@@ -20,7 +20,7 @@ function createTask({ title, priority = 'medium', completed = false }) {
     completed,
     createdAt: Date.now(),
   };
-  tasks.push(task);
+  tasks.unshift(task); // newest tasks show up first in the UI
   return task;
 }
 
@@ -46,4 +46,18 @@ function deleteTask(id) {
   return true;
 }
 
-export { reset, createTask, getAllTasks, getTaskById, updateTask, deleteTask };
+function getNextPendingTask() {
+  // The oldest task that hasn't been completed yet - the one that's
+  // been waiting the longest gets picked first.
+  return tasks.find((t) => !t.completed);
+}
+
+export {
+  reset,
+  createTask,
+  getAllTasks,
+  getTaskById,
+  updateTask,
+  deleteTask,
+  getNextPendingTask,
+};
