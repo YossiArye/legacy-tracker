@@ -22,18 +22,18 @@ function getTask(req, res) {
   res.json(task);
 }
 
-async function createTask(req, res) {
+function createTask(req, res) {
   const errors = validateTask(req.body);
   if (errors.length > 0) {
     return res.status(400).json({ errors });
   }
   const task = store.createTask(req.body);
-  await activityLog.record('created', task.id);
+  activityLog.record('created', task.id);
   log(`Created task ${task.id}`);
   res.status(201).json(task);
 }
 
-async function updateTask(req, res) {
+function updateTask(req, res) {
   const id = Number(req.params.id);
   const errors = validateTask(req.body, { partial: true });
   if (errors.length > 0) {
@@ -43,17 +43,17 @@ async function updateTask(req, res) {
   if (!updated) {
     return res.status(404).json({ error: 'Task not found' });
   }
-  await activityLog.record('updated', id);
+  activityLog.record('updated', id);
   res.json(updated);
 }
 
-async function deleteTask(req, res) {
+function deleteTask(req, res) {
   const id = Number(req.params.id);
   const removed = store.deleteTask(id);
   if (!removed) {
     return res.status(404).json({ error: 'Task not found' });
   }
-  await activityLog.record('deleted', id);
+  activityLog.record('deleted', id);
   res.status(204).end();
 }
 
