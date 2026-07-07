@@ -65,4 +65,85 @@ function nextTask(req, res) {
   res.json(task);
 }
 
-export { listTasks, getTask, createTask, updateTask, deleteTask, nextTask };
+// Bulk-import tasks from a simple CSV-ish payload: one "title,priority" per line.
+// Handles dedup, keyword-based priority bumping, validation, and a summary report.
+// TODO: this got out of hand, split it up before adding CSV file upload support.
+function bulkImportTasks(req, res) {
+  const { data } = req.body;
+  if (typeof data !== 'string' || data.trim().length === 0) {
+    return res.status(400).json({ error: 'No import data provided' });
+  }
+
+  const lines = data
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const seenTitles = new Set();
+  const created = [];
+  const skipped = [];
+  const urgentKeywords = ['urgent', 'asap', 'critical', 'now'];
+
+  for (const line of lines) {
+    const parts = line.split(',').map((p) => p.trim());
+    const title = parts[0];
+    let priority = parts[1] || 'medium';
+
+    if (!title) {
+      skipped.push({ line, reason: 'missing title' });
+      continue;
+    }
+
+    const normalizedTitle = title.toLowerCase();
+    if (seenTitles.has(normalizedTitle)) {
+      skipped.push({ line, reason: 'duplicate title' });
+      continue;
+    }
+    seenTitles.add(normalizedTitle);
+
+    if (!['low', 'medium', 'high'].includes(priority)) {
+      priority = 'medium';
+    }
+
+    const lowerTitle = title.toLowerCase();
+    for (const keyword of urgentKeywords) {
+      if (lowerTitle.includes(keyword)) {
+        priority = 'high';
+        break;
+      }
+    }
+
+    const errors = validateTask({ title, priority });
+    if (errors.length > 0) {
+      skipped.push({ line, reason: errors.join('; ') });
+      continue;
+    }
+
+    const task = store.createTask({ title, priority });
+    activityLog.record('created', task.id);
+    created.push(task);
+  }
+
+  const stats = {
+    total: lines.length,
+    created: created.length,
+    skipped: skipped.length,
+    byPriority: {
+      low: created.filter((t) => t.priority === 'low').length,
+      medium: created.filter((t) => t.priority === 'medium').length,
+      high: created.filter((t) => t.priority === 'high').length,
+    },
+  };
+
+  log(`Bulk import: ${created.length} created, ${skipped.length} skipped`);
+  res.status(201).json({ created, skipped, stats });
+}
+
+export {
+  listTasks,
+  getTask,
+  createTask,
+  updateTask,
+  deleteTask,
+  nextTask,
+  bulkImportTasks,
+};
