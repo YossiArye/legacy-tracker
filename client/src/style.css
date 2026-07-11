@@ -1,0 +1,39 @@
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 480px;
+  margin: 40px auto;
+  color: #222;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+}
+
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.task-item .done {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.priority-high {
+  border-left: 3px solid #e74c3c;
+  padding-left: 8px;
+}
+
+.filter-bar button.active {
+  font-weight: bold;
+}
+
+.add-task-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
