@@ -22,18 +22,18 @@ function getTask(req, res) {
   res.json(task);
 }
 
-function createTask(req, res) {
+async function createTask(req, res) {
   const errors = validateTask(req.body);
   if (errors.length > 0) {
     return res.status(400).json({ errors });
   }
   const task = store.createTask(req.body);
-  activityLog.record('created', task.id);
+  await activityLog.record('created', task.id);
   log(`Created task ${task.id}`);
   res.status(201).json(task);
 }
 
-function updateTask(req, res) {
+async function updateTask(req, res) {
   const id = Number(req.params.id);
   const errors = validateTask(req.body, { partial: true });
   if (errors.length > 0) {
@@ -43,17 +43,17 @@ function updateTask(req, res) {
   if (!updated) {
     return res.status(404).json({ error: 'Task not found' });
   }
-  activityLog.record('updated', id);
+  await activityLog.record('updated', id);
   res.json(updated);
 }
 
-function deleteTask(req, res) {
+async function deleteTask(req, res) {
   const id = Number(req.params.id);
   const removed = store.deleteTask(id);
   if (!removed) {
     return res.status(404).json({ error: 'Task not found' });
   }
-  activityLog.record('deleted', id);
+  await activityLog.record('deleted', id);
   res.status(204).end();
 }
 
@@ -68,7 +68,7 @@ function nextTask(req, res) {
 // Bulk-import tasks from a simple CSV-ish payload: one "title,priority" per line.
 // Handles dedup, keyword-based priority bumping, validation, and a summary report.
 // TODO: this got out of hand, split it up before adding CSV file upload support.
-function bulkImportTasks(req, res) {
+async function bulkImportTasks(req, res) {
   const { data } = req.body;
   if (typeof data !== 'string' || data.trim().length === 0) {
     return res.status(400).json({ error: 'No import data provided' });
@@ -119,7 +119,7 @@ function bulkImportTasks(req, res) {
     }
 
     const task = store.createTask({ title, priority });
-    activityLog.record('created', task.id);
+    await activityLog.record('created', task.id);
     created.push(task);
   }
 
