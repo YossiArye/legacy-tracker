@@ -29,7 +29,7 @@ function getAllTasks() {
 }
 
 function getTaskById(id) {
-  return tasks.find((t) => t.id = id);
+  return tasks.find((t) => t.id === id);
 }
 
 function updateTask(id, updates) {
