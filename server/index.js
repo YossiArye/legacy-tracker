@@ -2,12 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 import tasksRouter from './routes/tasks.js';
+import { errorHandler } from './middleware/errorHandler.js';
 import * as store from './store.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/api/tasks', tasksRouter);
+app.use(errorHandler);
 
 const SEED_TASKS = [
   { title: 'Set up project repo', priority: 'medium', completed: true },
