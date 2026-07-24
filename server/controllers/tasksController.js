@@ -1,7 +1,9 @@
 import * as store from '../store.js';
 import * as activityLog from '../activityLog.js';
-import { validateTask } from '../utils/validate.js';
+import { validateTask, VALID_PRIORITIES } from '../utils/validate.js';
 import { log } from '../utils/logger.js';
+
+const URGENT_KEYWORDS = ['urgent', 'asap', 'critical', 'now'];
 
 function listTasks(req, res) {
   const { completed } = req.query;
@@ -22,18 +24,18 @@ function getTask(req, res) {
   res.json(task);
 }
 
-function createTask(req, res) {
+async function createTask(req, res) {
   const errors = validateTask(req.body);
   if (errors.length > 0) {
     return res.status(400).json({ errors });
   }
   const task = store.createTask(req.body);
-  activityLog.record('created', task.id);
+  await activityLog.record('created', task.id);
   log(`Created task ${task.id}`);
   res.status(201).json(task);
 }
 
-function updateTask(req, res) {
+async function updateTask(req, res) {
   const id = Number(req.params.id);
   const errors = validateTask(req.body, { partial: true });
   if (errors.length > 0) {
@@ -43,17 +45,17 @@ function updateTask(req, res) {
   if (!updated) {
     return res.status(404).json({ error: 'Task not found' });
   }
-  activityLog.record('updated', id);
+  await activityLog.record('updated', id);
   res.json(updated);
 }
 
-function deleteTask(req, res) {
+async function deleteTask(req, res) {
   const id = Number(req.params.id);
   const removed = store.deleteTask(id);
   if (!removed) {
     return res.status(404).json({ error: 'Task not found' });
   }
-  activityLog.record('deleted', id);
+  await activityLog.record('deleted', id);
   res.status(204).end();
 }
 
@@ -65,10 +67,47 @@ function nextTask(req, res) {
   res.json(task);
 }
 
+function parseImportLine(line) {
+  const parts = line.split(',').map((p) => p.trim());
+  const title = parts[0];
+  const priority = parts[1] || 'medium';
+  return { title, priority };
+}
+
+function resolvePriority(priority, lowerTitle) {
+  let resolved = priority;
+
+  if (!VALID_PRIORITIES.includes(resolved)) {
+    resolved = 'medium';
+  }
+
+  for (const keyword of URGENT_KEYWORDS) {
+    if (lowerTitle.includes(keyword)) {
+      resolved = 'high';
+      break;
+    }
+  }
+
+  return resolved;
+}
+
+function buildImportStats(totalLines, created, skipped) {
+  const byPriority = { low: 0, medium: 0, high: 0 };
+  for (const task of created) {
+    byPriority[task.priority]++;
+  }
+
+  return {
+    total: totalLines,
+    created: created.length,
+    skipped: skipped.length,
+    byPriority,
+  };
+}
+
 // Bulk-import tasks from a simple CSV-ish payload: one "title,priority" per line.
-// Handles dedup, keyword-based priority bumping, validation, and a summary report.
-// TODO: this got out of hand, split it up before adding CSV file upload support.
-function bulkImportTasks(req, res) {
+// Delegates parsing, priority resolution, and stats building to focused helpers.
+async function bulkImportTasks(req, res) {
   const { data } = req.body;
   if (typeof data !== 'string' || data.trim().length === 0) {
     return res.status(400).json({ error: 'No import data provided' });
@@ -81,36 +120,23 @@ function bulkImportTasks(req, res) {
   const seenTitles = new Set();
   const created = [];
   const skipped = [];
-  const urgentKeywords = ['urgent', 'asap', 'critical', 'now'];
 
   for (const line of lines) {
-    const parts = line.split(',').map((p) => p.trim());
-    const title = parts[0];
-    let priority = parts[1] || 'medium';
+    const { title, priority: rawPriority } = parseImportLine(line);
 
     if (!title) {
       skipped.push({ line, reason: 'missing title' });
       continue;
     }
 
-    const normalizedTitle = title.toLowerCase();
-    if (seenTitles.has(normalizedTitle)) {
+    const lowerTitle = title.toLowerCase();
+    if (seenTitles.has(lowerTitle)) {
       skipped.push({ line, reason: 'duplicate title' });
       continue;
     }
-    seenTitles.add(normalizedTitle);
+    seenTitles.add(lowerTitle);
 
-    if (!['low', 'medium', 'high'].includes(priority)) {
-      priority = 'medium';
-    }
-
-    const lowerTitle = title.toLowerCase();
-    for (const keyword of urgentKeywords) {
-      if (lowerTitle.includes(keyword)) {
-        priority = 'high';
-        break;
-      }
-    }
+    const priority = resolvePriority(rawPriority, lowerTitle);
 
     const errors = validateTask({ title, priority });
     if (errors.length > 0) {
@@ -119,21 +145,11 @@ function bulkImportTasks(req, res) {
     }
 
     const task = store.createTask({ title, priority });
-    activityLog.record('created', task.id);
+    await activityLog.record('created', task.id);
     created.push(task);
   }
 
-  const stats = {
-    total: lines.length,
-    created: created.length,
-    skipped: skipped.length,
-    byPriority: {
-      low: created.filter((t) => t.priority === 'low').length,
-      medium: created.filter((t) => t.priority === 'medium').length,
-      high: created.filter((t) => t.priority === 'high').length,
-    },
-  };
-
+  const stats = buildImportStats(lines.length, created, skipped);
   log(`Bulk import: ${created.length} created, ${skipped.length} skipped`);
   res.status(201).json({ created, skipped, stats });
 }
