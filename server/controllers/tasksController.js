@@ -1,7 +1,9 @@
 import * as store from '../store.js';
 import * as activityLog from '../activityLog.js';
-import { validateTask } from '../utils/validate.js';
+import { validateTask, VALID_PRIORITIES } from '../utils/validate.js';
 import { log } from '../utils/logger.js';
+
+const URGENT_KEYWORDS = ['urgent', 'asap', 'critical', 'now'];
 
 function listTasks(req, res) {
   const { completed } = req.query;
@@ -65,9 +67,46 @@ function nextTask(req, res) {
   res.json(task);
 }
 
+function parseImportLine(line) {
+  const parts = line.split(',').map((p) => p.trim());
+  const title = parts[0];
+  const priority = parts[1] || 'medium';
+  return { title, priority };
+}
+
+function resolvePriority(priority, lowerTitle) {
+  let resolved = priority;
+
+  if (!VALID_PRIORITIES.includes(resolved)) {
+    resolved = 'medium';
+  }
+
+  for (const keyword of URGENT_KEYWORDS) {
+    if (lowerTitle.includes(keyword)) {
+      resolved = 'high';
+      break;
+    }
+  }
+
+  return resolved;
+}
+
+function buildImportStats(totalLines, created, skipped) {
+  const byPriority = { low: 0, medium: 0, high: 0 };
+  for (const task of created) {
+    byPriority[task.priority]++;
+  }
+
+  return {
+    total: totalLines,
+    created: created.length,
+    skipped: skipped.length,
+    byPriority,
+  };
+}
+
 // Bulk-import tasks from a simple CSV-ish payload: one "title,priority" per line.
-// Handles dedup, keyword-based priority bumping, validation, and a summary report.
-// TODO: this got out of hand, split it up before adding CSV file upload support.
+// Delegates parsing, priority resolution, and stats building to focused helpers.
 async function bulkImportTasks(req, res) {
   const { data } = req.body;
   if (typeof data !== 'string' || data.trim().length === 0) {
@@ -81,36 +120,23 @@ async function bulkImportTasks(req, res) {
   const seenTitles = new Set();
   const created = [];
   const skipped = [];
-  const urgentKeywords = ['urgent', 'asap', 'critical', 'now'];
 
   for (const line of lines) {
-    const parts = line.split(',').map((p) => p.trim());
-    const title = parts[0];
-    let priority = parts[1] || 'medium';
+    const { title, priority: rawPriority } = parseImportLine(line);
 
     if (!title) {
       skipped.push({ line, reason: 'missing title' });
       continue;
     }
 
-    const normalizedTitle = title.toLowerCase();
-    if (seenTitles.has(normalizedTitle)) {
+    const lowerTitle = title.toLowerCase();
+    if (seenTitles.has(lowerTitle)) {
       skipped.push({ line, reason: 'duplicate title' });
       continue;
     }
-    seenTitles.add(normalizedTitle);
+    seenTitles.add(lowerTitle);
 
-    if (!['low', 'medium', 'high'].includes(priority)) {
-      priority = 'medium';
-    }
-
-    const lowerTitle = title.toLowerCase();
-    for (const keyword of urgentKeywords) {
-      if (lowerTitle.includes(keyword)) {
-        priority = 'high';
-        break;
-      }
-    }
+    const priority = resolvePriority(rawPriority, lowerTitle);
 
     const errors = validateTask({ title, priority });
     if (errors.length > 0) {
@@ -123,17 +149,7 @@ async function bulkImportTasks(req, res) {
     created.push(task);
   }
 
-  const stats = {
-    total: lines.length,
-    created: created.length,
-    skipped: skipped.length,
-    byPriority: {
-      low: created.filter((t) => t.priority === 'low').length,
-      medium: created.filter((t) => t.priority === 'medium').length,
-      high: created.filter((t) => t.priority === 'high').length,
-    },
-  };
-
+  const stats = buildImportStats(lines.length, created, skipped);
   log(`Bulk import: ${created.length} created, ${skipped.length} skipped`);
   res.status(201).json({ created, skipped, stats });
 }
