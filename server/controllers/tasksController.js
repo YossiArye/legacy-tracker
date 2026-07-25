@@ -25,10 +25,6 @@ function getTask(req, res) {
 }
 
 async function createTask(req, res) {
-  const errors = validateTask(req.body);
-  if (errors.length > 0) {
-    return res.status(400).json({ errors });
-  }
   const task = store.createTask(req.body);
   await activityLog.record('created', task.id);
   log(`Created task ${task.id}`);
@@ -37,10 +33,6 @@ async function createTask(req, res) {
 
 async function updateTask(req, res) {
   const id = Number(req.params.id);
-  const errors = validateTask(req.body, { partial: true });
-  if (errors.length > 0) {
-    return res.status(400).json({ errors });
-  }
   const updated = store.updateTask(id, req.body);
   if (!updated) {
     return res.status(404).json({ error: 'Task not found' });
@@ -109,9 +101,6 @@ function buildImportStats(totalLines, created, skipped) {
 // Delegates parsing, priority resolution, and stats building to focused helpers.
 async function bulkImportTasks(req, res) {
   const { data } = req.body;
-  if (typeof data !== 'string' || data.trim().length === 0) {
-    return res.status(400).json({ error: 'No import data provided' });
-  }
 
   const lines = data
     .split('\n')

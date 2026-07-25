@@ -10,6 +10,7 @@ function FilterBar({ filter, onChange }) {
       {FILTERS.map((f) => (
         <button
           key={f.value}
+          type="button"
           className={filter === f.value ? 'active' : ''}
           onClick={() => onChange(f.value)}
         >

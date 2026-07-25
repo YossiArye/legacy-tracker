@@ -5,6 +5,22 @@ const MAX_TITLE_LENGTH = 120;
 const MIN_TITLE_LENGTH = 3;
 const VALID_PRIORITIES = ['low', 'medium', 'high'];
 
+/**
+ * Normalizes a task payload before validation/storage - currently just
+ * trims `title` so the length check in validateTask and the value that
+ * actually gets stored agree with each other.
+ * @param {object} payload - raw task payload (from req.body)
+ * @param {string} [payload.title]
+ * @returns {object} a new object with `title` trimmed, if present
+ */
+function normalizeTaskInput(payload) {
+  const normalized = { ...payload };
+  if (typeof normalized.title === 'string') {
+    normalized.title = normalized.title.trim();
+  }
+  return normalized;
+}
+
 function validateTask(payload, { partial = false } = {}) {
   const errors = [];
   const { title, priority } = payload;
@@ -24,4 +40,10 @@ function validateTask(payload, { partial = false } = {}) {
   return errors;
 }
 
-export { validateTask, VALID_PRIORITIES, MAX_TITLE_LENGTH, MIN_TITLE_LENGTH };
+export {
+  validateTask,
+  normalizeTaskInput,
+  VALID_PRIORITIES,
+  MAX_TITLE_LENGTH,
+  MIN_TITLE_LENGTH,
+};
