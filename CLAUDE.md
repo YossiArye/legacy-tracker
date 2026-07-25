@@ -32,3 +32,9 @@ client/   React SPA (Vite) — talks to the API over relative /api/* fetches
 - **Server flow**: `server/routes/tasks.js` → `server/controllers/tasksController.js` → `server/store.js` (in-memory array, reset on every restart, no persistence) + `server/activityLog.js` (records create/update/delete, deliberately delayed 50ms via `setTimeout` to simulate an external call).
 - `server/index.js` exports the Express `app` for supertest-based integration tests and only calls `.listen()` when run directly (guarded by `isMain`/`fileURLToPath` check) — keep that pattern when touching startup logic.
 - Validation (`server/utils/validate.js`) is shared between single-create and the bulk `/api/tasks/import` endpoint; the import endpoint (`bulkImportTasks` in `tasksController.js`) also does its own dedup + keyword-based priority escalation (`urgent`/`asap`/`critical`/`now` → forces `high`) — there's a `TODO` in that function noting it needs to be split up before adding real file upload support.
+
+## Code style
+
+- Use the logger in `server/utils/logger.js` — never `console.log`.
+- All new functions get JSDoc.
+- Prefer `const`.
