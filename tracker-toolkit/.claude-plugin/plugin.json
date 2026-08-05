@@ -1,0 +1,8 @@
+{
+  "name": "tracker-toolkit",
+  "description": "Skills and reviewer agent for working on the TrackIt task-tracker repo: /fix-tests, /add-endpoint, /ship, /audit-todos, and the tracker-reviewer subagent.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Yossi Arye"
+  }
+}
