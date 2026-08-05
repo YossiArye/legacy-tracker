@@ -1,10 +1,17 @@
 import * as store from '../store.js';
 import * as activityLog from '../activityLog.js';
-import { validateTask, VALID_PRIORITIES } from '../utils/validate.js';
+import { validateTask, VALID_PRIORITIES, VALID_CATEGORIES } from '../utils/validate.js';
 import { log } from '../utils/logger.js';
+import { getTaskAgeInDays } from '../utils/taskAge.js';
 
 const URGENT_KEYWORDS = ['urgent', 'asap', 'critical', 'now'];
 
+/**
+ * Lists tasks, optionally filtered by completion status, with each task
+ * annotated with an `ageInDays` field.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
 function listTasks(req, res) {
   const { completed } = req.query;
   let tasks = store.getAllTasks();
@@ -12,7 +19,8 @@ function listTasks(req, res) {
     const wantCompleted = completed === 'true';
     tasks = tasks.filter((t) => t.completed === wantCompleted);
   }
-  res.json(tasks);
+  const tasksWithAge = tasks.map((t) => ({ ...t, ageInDays: getTaskAgeInDays(t) }));
+  res.json(tasksWithAge);
 }
 
 function getTask(req, res) {
@@ -63,7 +71,8 @@ function parseImportLine(line) {
   const parts = line.split(',').map((p) => p.trim());
   const title = parts[0];
   const priority = parts[1] || 'medium';
-  return { title, priority };
+  const category = parts[2] || 'other';
+  return { title, priority, category };
 }
 
 function resolvePriority(priority, lowerTitle) {
@@ -83,10 +92,22 @@ function resolvePriority(priority, lowerTitle) {
   return resolved;
 }
 
+/**
+ * Falls back to the default category when the given value isn't one of
+ * VALID_CATEGORIES.
+ * @param {string} category - raw category value, possibly invalid
+ * @returns {string} a valid category
+ */
+function resolveCategory(category) {
+  return VALID_CATEGORIES.includes(category) ? category : 'other';
+}
+
 function buildImportStats(totalLines, created, skipped) {
   const byPriority = { low: 0, medium: 0, high: 0 };
+  const byCategory = { work: 0, personal: 0, shopping: 0, other: 0 };
   for (const task of created) {
     byPriority[task.priority]++;
+    byCategory[task.category]++;
   }
 
   return {
@@ -94,11 +115,12 @@ function buildImportStats(totalLines, created, skipped) {
     created: created.length,
     skipped: skipped.length,
     byPriority,
+    byCategory,
   };
 }
 
-// Bulk-import tasks from a simple CSV-ish payload: one "title,priority" per line.
-// Delegates parsing, priority resolution, and stats building to focused helpers.
+// Bulk-import tasks from a simple CSV-ish payload: one "title,priority,category" per line.
+// Delegates parsing, priority/category resolution, and stats building to focused helpers.
 async function bulkImportTasks(req, res) {
   const { data } = req.body;
 
@@ -111,7 +133,7 @@ async function bulkImportTasks(req, res) {
   const skipped = [];
 
   for (const line of lines) {
-    const { title, priority: rawPriority } = parseImportLine(line);
+    const { title, priority: rawPriority, category: rawCategory } = parseImportLine(line);
 
     if (!title) {
       skipped.push({ line, reason: 'missing title' });
@@ -126,14 +148,15 @@ async function bulkImportTasks(req, res) {
     seenTitles.add(lowerTitle);
 
     const priority = resolvePriority(rawPriority, lowerTitle);
+    const category = resolveCategory(rawCategory);
 
-    const errors = validateTask({ title, priority });
+    const errors = validateTask({ title, priority, category });
     if (errors.length > 0) {
       skipped.push({ line, reason: errors.join('; ') });
       continue;
     }
 
-    const task = store.createTask({ title, priority });
+    const task = store.createTask({ title, priority, category });
     await activityLog.record('created', task.id);
     created.push(task);
   }

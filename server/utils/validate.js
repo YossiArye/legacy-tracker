@@ -4,6 +4,7 @@
 const MAX_TITLE_LENGTH = 120;
 const MIN_TITLE_LENGTH = 3;
 const VALID_PRIORITIES = ['low', 'medium', 'high'];
+const VALID_CATEGORIES = ['work', 'personal', 'shopping', 'other'];
 
 /**
  * Normalizes a task payload before validation/storage - currently just
@@ -23,7 +24,7 @@ function normalizeTaskInput(payload) {
 
 function validateTask(payload, { partial = false } = {}) {
   const errors = [];
-  const { title, priority } = payload;
+  const { title, priority, category } = payload;
 
   if (!partial || title !== undefined) {
     if (typeof title !== 'string' || title.trim().length < MIN_TITLE_LENGTH) {
@@ -37,6 +38,10 @@ function validateTask(payload, { partial = false } = {}) {
     errors.push(`Priority must be one of: ${VALID_PRIORITIES.join(', ')}`);
   }
 
+  if (category !== undefined && !VALID_CATEGORIES.includes(category)) {
+    errors.push(`Category must be one of: ${VALID_CATEGORIES.join(', ')}`);
+  }
+
   return errors;
 }
 
@@ -44,6 +49,7 @@ export {
   validateTask,
   normalizeTaskInput,
   VALID_PRIORITIES,
+  VALID_CATEGORIES,
   MAX_TITLE_LENGTH,
   MIN_TITLE_LENGTH,
 };

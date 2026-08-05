@@ -11,6 +11,7 @@ describe('store', () => {
     expect(task.id).toBeTypeOf('number');
     expect(task.title).toBe('Write report');
     expect(task.priority).toBe('medium');
+    expect(task.category).toBe('other');
     expect(task.completed).toBe(false);
   });
 

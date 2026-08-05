@@ -48,7 +48,7 @@ describe('createTask', () => {
     expect(fetch).toHaveBeenCalledWith('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Buy milk', priority: 'high' }),
+      body: JSON.stringify({ title: 'Buy milk', priority: 'high', category: 'other' }),
     });
     expect(result).toEqual(created);
   });
@@ -61,7 +61,33 @@ describe('createTask', () => {
     expect(fetch).toHaveBeenCalledWith('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Buy milk', priority: 'medium' }),
+      body: JSON.stringify({ title: 'Buy milk', priority: 'medium', category: 'other' }),
+    });
+  });
+
+  it('POSTs the given category and returns the created task', async () => {
+    const created = { id: 2, title: 'Buy milk', priority: 'high', category: 'shopping' };
+    fetch.mockResolvedValue(mockResponse({ ok: true, json: created }));
+
+    const result = await createTask('Buy milk', 'high', 'shopping');
+
+    expect(fetch).toHaveBeenCalledWith('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Buy milk', priority: 'high', category: 'shopping' }),
+    });
+    expect(result).toEqual(created);
+  });
+
+  it('defaults category to other when omitted', async () => {
+    fetch.mockResolvedValue(mockResponse({ ok: true, json: {} }));
+
+    await createTask('Buy milk', 'high');
+
+    expect(fetch).toHaveBeenCalledWith('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Buy milk', priority: 'high', category: 'other' }),
     });
   });
 

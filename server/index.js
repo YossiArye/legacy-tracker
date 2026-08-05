@@ -3,6 +3,7 @@ import cors from 'cors';
 import { fileURLToPath } from 'url';
 import tasksRouter from './routes/tasks.js';
 import prioritiesRouter from './routes/priorities.js';
+import categoriesRouter from './routes/categories.js';
 import * as store from './store.js';
 
 const app = express();
@@ -10,11 +11,12 @@ app.use(cors());
 app.use(express.json());
 app.use('/api/tasks', tasksRouter);
 app.use('/api/priorities', prioritiesRouter);
+app.use('/api/categories', categoriesRouter);
 
 const SEED_TASKS = [
-  { title: 'Set up project repo', priority: 'medium', completed: true },
-  { title: 'Write onboarding docs', priority: 'low', completed: false },
-  { title: 'Fix login bug reported by QA', priority: 'high', completed: false },
+  { title: 'Set up project repo', priority: 'medium', category: 'work', completed: true },
+  { title: 'Write onboarding docs', priority: 'low', category: 'work', completed: false },
+  { title: 'Fix login bug reported by QA', priority: 'high', category: 'work', completed: false },
 ];
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);

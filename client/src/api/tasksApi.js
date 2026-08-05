@@ -6,11 +6,11 @@ async function fetchTasks() {
   return res.json();
 }
 
-async function createTask(title, priority = 'medium') {
+async function createTask(title, priority = 'medium', category = 'other') {
   const res = await fetch(BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, priority }),
+    body: JSON.stringify({ title, priority, category }),
   });
   if (!res.ok) throw new Error('Failed to create task');
   return res.json();
