@@ -1,6 +1,8 @@
 ---
 name: fix-tests
 description: Run the project's test suite and fix whatever is failing, using the live test output as context.
+allowed-tools:
+  - Bash(npm test:*)
 ---
 
 ## Current test output

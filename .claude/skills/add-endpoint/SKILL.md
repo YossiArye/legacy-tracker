@@ -1,6 +1,6 @@
 ---
 name: add-endpoint
-description: Scaffold a new API endpoint (route + controller + test) for a resource, following this repo's conventions. Usage: /add-endpoint <resource> <method>, e.g. /add-endpoint priorities GET
+description: "Scaffold a new API endpoint (route + controller + test) for a resource, following this repo's conventions. Usage: /add-endpoint <resource> <method>, e.g. /add-endpoint priorities GET"
 ---
 
 Scaffold a new API endpoint for resource **$0** using HTTP method **$1**.
