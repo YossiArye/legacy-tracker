@@ -7,7 +7,10 @@ import categoriesRouter from './routes/categories.js';
 import * as store from './store.js';
 
 const app = express();
-app.use(cors({ origin: process.env.CLIENT_ORIGIN }));
+// Falls back to '*' when CLIENT_ORIGIN is unset: passing `undefined` straight
+// through would overwrite the cors package's own '*' default and emit no
+// Access-Control-Allow-Origin header at all, breaking local/standalone use.
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
 app.use(express.json());
 app.use('/api/tasks', tasksRouter);
 app.use('/api/priorities', prioritiesRouter);
