@@ -35,8 +35,8 @@ function useTasks() {
       .finally(() => setLoading(false));
   }, []);
 
-  const addTask = useCallback(async (title, priority) => {
-    const task = await api.createTask(title, priority);
+  const addTask = useCallback(async (title, priority, category) => {
+    const task = await api.createTask(title, priority, category);
     setTasks((prev) => [task, ...prev]);
   }, []);
 

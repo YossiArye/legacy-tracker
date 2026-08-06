@@ -12,11 +12,12 @@ function reset(seedData = []) {
   }
 }
 
-function createTask({ title, priority = "medium", completed = false }) {
+function createTask({ title, priority = "medium", category = "other", completed = false }) {
   const task = {
     id: nextId++,
     title,
     priority,
+    category,
     completed,
     createdAt: Date.now(),
   }

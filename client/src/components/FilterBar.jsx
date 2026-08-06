@@ -1,20 +1,14 @@
-const FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'completed', label: 'Completed' },
-];
-
-function FilterBar({ filter, onChange }) {
+function FilterBar({ options, value, onChange }) {
   return (
     <div className="filter-bar">
-      {FILTERS.map((f) => (
+      {options.map((o) => (
         <button
-          key={f.value}
+          key={o.value}
           type="button"
-          className={filter === f.value ? 'active' : ''}
-          onClick={() => onChange(f.value)}
+          className={value === o.value ? 'active' : ''}
+          onClick={() => onChange(o.value)}
         >
-          {f.label}
+          {o.label}
         </button>
       ))}
     </div>
